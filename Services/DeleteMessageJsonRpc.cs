@@ -2,7 +2,7 @@ using Journal.Models;
 
 namespace Journal.Services;
 
-public class DeleteMessageJsonRpc : IJsonRpcHandler<DeleteMessageRequest, NullResponse>
+public class DeleteMessageJsonRpc : IJsonRpcHandler<DeleteMessageRequest, EmptyResponse>
 {
     private readonly JournalService _journalService;
 
@@ -11,10 +11,10 @@ public class DeleteMessageJsonRpc : IJsonRpcHandler<DeleteMessageRequest, NullRe
         _journalService = journalService;
     }
 
-    public async Task<NullResponse> Execute(DeleteMessageRequest request)
+    public async Task<EmptyResponse> Execute(DeleteMessageRequest request)
     {
         await _journalService.DeleteMessage(request.Id);
-        return new NullResponse();
+        return new EmptyResponse();
     }
 
     public string GetMethod()

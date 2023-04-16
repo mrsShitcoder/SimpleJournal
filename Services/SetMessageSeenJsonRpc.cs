@@ -2,7 +2,7 @@ using Journal.Models;
 
 namespace Journal.Services;
 
-public class SetMessageSeenJsonRpc : IJsonRpcHandler<SetMessageSeenRequest, NullResponse>
+public class SetMessageSeenJsonRpc : IJsonRpcHandler<SetMessageSeenRequest, EmptyResponse>
 {
     private readonly JournalService _journalService;
 
@@ -11,10 +11,10 @@ public class SetMessageSeenJsonRpc : IJsonRpcHandler<SetMessageSeenRequest, Null
         _journalService = journalService;
     }
 
-    public async Task<NullResponse> Execute(SetMessageSeenRequest request)
+    public async Task<EmptyResponse> Execute(SetMessageSeenRequest request)
     {
         await _journalService.SetMessageSeen(request.Id);
-        return new NullResponse();
+        return new EmptyResponse();
     }
 
     public string GetMethod()

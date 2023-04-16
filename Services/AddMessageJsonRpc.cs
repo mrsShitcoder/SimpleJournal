@@ -2,7 +2,7 @@ using Journal.Models;
 
 namespace Journal.Services;
 
-public class AddMessageJsonRpc : IJsonRpcHandler<AddMessageRequest, NullResponse>
+public class AddMessageJsonRpc : IJsonRpcHandler<AddMessageRequest, EmptyResponse>
 {
     private readonly JournalService _journalService;
 
@@ -11,7 +11,7 @@ public class AddMessageJsonRpc : IJsonRpcHandler<AddMessageRequest, NullResponse
         _journalService = journalService;
     }
 
-    public async Task<NullResponse> Execute(AddMessageRequest request)
+    public async Task<EmptyResponse> Execute(AddMessageRequest request)
     {
         UserSequence seq = await _journalService.GetNewUserSequence(request.UserId);
         var messageId = new MessageId(seq);
@@ -28,7 +28,7 @@ public class AddMessageJsonRpc : IJsonRpcHandler<AddMessageRequest, NullResponse
 
         var content = new MessageContent { Id = messageId, Content = request.Content };
         await _journalService.AddMessage(messageId, preview, content);
-        return new NullResponse();
+        return new EmptyResponse();
     }
 
     public string GetMethod()

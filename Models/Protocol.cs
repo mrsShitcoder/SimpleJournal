@@ -31,7 +31,7 @@ public class AddMessageRequest
     public JsonDocument Content { get; set; } = null!;
 }
 
-public class NullResponse
+public class EmptyResponse
 {
     
 }
