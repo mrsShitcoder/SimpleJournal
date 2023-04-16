@@ -17,7 +17,7 @@ public interface IJsonRpcHandler<TRequest, TResponse> : IJsonRpcHandlerBase
     public TRequest PrepareRequest(JsonRpcRequest jsonRpcRequest)
     {
         var concreteRequest = jsonRpcRequest.Params.RootElement;
-        var request = JsonSerializer.Deserialize<TRequest>(concreteRequest.GetProperty("request"));
+        var request = JsonSerializer.Deserialize<TRequest>(concreteRequest.GetProperty("request").GetRawText());
         if (request == null)
         {
             throw new ArgumentException($"Request {concreteRequest} is not parseable");
