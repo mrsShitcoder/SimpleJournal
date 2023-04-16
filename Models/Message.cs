@@ -11,16 +11,14 @@ public enum MessageState
 
 public class MessageContent
 {
-    [BsonId]
-    public MessageId Id { get; set; }
+    [BsonId] public MessageId Id { get; set; } = null!;
     
     public JsonDocument Content { get; set; } = null!;
 }
 
 public class MessagePreview
 {
-    [BsonId]
-    public MessageId Id { get; set; }
+    [BsonId] public MessageId Id { get; set; } = null!;
     
     public DateTime Date { get; set; }
 
@@ -31,10 +29,3 @@ public class MessagePreview
     public MessageState State { get; set; }
 }
 
-public class UserSequence
-{
-    [BsonId] 
-    public ulong UserId { get; set; }
-    
-    public ulong MaxSequence { get; set; }
-}

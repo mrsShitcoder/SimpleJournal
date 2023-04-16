@@ -9,5 +9,5 @@ public class JournalDatabaseSettings
 
     public string MessagePreviewsCollection { get; set; } = null!;
 
-    public string UserSequenceCollection { get; set; } = null;
+    public string UserSequenceCollection { get; set; } = null!;
 }

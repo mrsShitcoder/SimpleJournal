@@ -33,6 +33,11 @@ public class JournalDatabaseService
         return await cursor.ToListAsync();
     }
 
+    public async Task<MessagePreview?> GetMessagePreviewAsync(MessageId messageId)
+    {
+        return await _messagePreviews.Find(preview => preview.Id == messageId).FirstOrDefaultAsync();
+    }
+
     public async Task<UserSequence?> GetUserSequenceAsync(ulong userId)
     {
         return await _userSequence.Find(sequence => sequence.UserId == userId).FirstOrDefaultAsync();
@@ -86,5 +91,15 @@ public class JournalDatabaseService
             }
             
         }
+    }
+
+    public async Task UpdatePreview(MessagePreview updatedPreview)
+    {
+        var updateState = Builders<MessagePreview>.Update.Set(preview => preview.State, updatedPreview.State);
+        var updateHeader = Builders<MessagePreview>.Update.Set(preview => preview.Header, updatedPreview.Header);
+        var updateBody = Builders<MessagePreview>.Update.Set(preview => preview.Preview, updatedPreview.Preview);
+        var update = Builders<MessagePreview>.Update.Combine(updateState, updateBody, updateHeader);
+        await _messagePreviews.UpdateOneAsync<MessagePreview>(preview => preview.Id == updatedPreview.Id,
+            update);
     }
 }

@@ -10,6 +10,12 @@ public class MessageId : IComparable<MessageId>
         UserId = userId;
         Sequence = sequence;
     }
+
+    public MessageId(UserSequence sequence)
+    {
+        UserId = sequence.UserId;
+        Sequence = sequence.MaxSequence;
+    }
     public int CompareTo(MessageId? other)
     {
         if (other == null)

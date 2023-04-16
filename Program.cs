@@ -10,7 +10,6 @@ builder.Services.AddSingleton<JournalDatabaseService>();
 builder.Services.AddSingleton<JournalService>();
 
 var app = builder.Build();
-
-app.MapGet("/", () => "Hello World!");
-
+app.UseRouting();
+app.MapControllers();
 app.Run();

@@ -22,7 +22,14 @@ public class JournalService
         {
             return cachedData;
         }
-        return await _databaseService.GetMessagePreviewsAsync(fromId, count);
+
+        List<MessagePreview> previews = await _databaseService.GetMessagePreviewsAsync(fromId, count);
+        if (previews.Any())
+        {
+            _previewsCache.AddOrUpdateMultiple(fromId.UserId, previews);
+        }
+        
+        return previews;
     }
 
     public async Task<MessageContent> GetContent(MessageId messageId)
@@ -37,6 +44,7 @@ public class JournalService
 
         if (fetchedData != null)
         {
+            _contentsCache.AddOrUpdate(messageId, fetchedData);
             return fetchedData;
         }
 
@@ -55,6 +63,24 @@ public class JournalService
         await _databaseService.DeleteMessage(messageId);
         _previewsCache.Delete(messageId);
         _contentsCache.Delete(messageId);
+    }
+
+    public async Task SetMessageSeen(MessageId messageId)
+    {
+        var preview = _previewsCache.GetOne(messageId) ?? await _databaseService.GetMessagePreviewAsync(messageId);
+        if (preview == null)
+        {
+            throw new KeyNotFoundException($"Not found messageId: {messageId} neither in cache nor in DB");
+        }
+
+        if (preview.State == MessageState.Seen)
+        {
+            return;
+        }
+        
+        preview.State = MessageState.Seen;
+        await _databaseService.UpdatePreview(preview);
+        _previewsCache.AddOrUpdate(messageId, preview);
     }
 
     public async Task<UserSequence> GetNewUserSequence(ulong userId)

@@ -22,6 +22,17 @@ public class PreviewsCache
         _previewsCache.Set(messageId.UserId, userMessages, DateTimeOffset.UtcNow.Add(_cacheDuration));
     }
 
+    public void AddOrUpdateMultiple(ulong userId, List<MessagePreview> previews)
+    {
+        var userMessages = _previewsCache.Get<Dictionary<MessageId, MessagePreview>>(userId)
+                           ?? new Dictionary<MessageId, MessagePreview>();
+        foreach (var preview in previews)
+        {
+            userMessages[preview.Id] = preview;
+        }
+        _previewsCache.Set(userId, userMessages, DateTimeOffset.UtcNow.Add(_cacheDuration));
+    }
+
     public List<MessagePreview>? Get(MessageId fromId, int count)
     {
         var previews = _previewsCache.Get<Dictionary<MessageId, MessagePreview>>(fromId.UserId);
@@ -33,11 +44,11 @@ public class PreviewsCache
         var result = new List<MessagePreview>();
         int lastIndex = 0;
 
-        foreach (var messageId in previews.Keys)
+        foreach (var preview in previews)
         {
-            if (messageId.CompareTo(fromId) > 0)
+            if (preview.Key.CompareTo(fromId) > 0)
             {
-                result.Add(previews[messageId]);
+                result.Add(preview.Value);
                 lastIndex++;
                 if (lastIndex == count)
                 {
@@ -52,6 +63,22 @@ public class PreviewsCache
         }
 
         return result;
+    }
+
+    public MessagePreview? GetOne(MessageId messageId)
+    {
+        var previews = _previewsCache.Get<Dictionary<MessageId, MessagePreview>>(messageId.UserId);
+        if (previews == null)
+        {
+            return null;
+        }
+        
+        if (previews.TryGetValue(messageId, out var preview))
+        {
+            return preview;
+        }
+
+        return null;
     }
 
     public void Delete(MessageId messageId)
