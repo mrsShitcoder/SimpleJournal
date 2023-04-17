@@ -26,8 +26,8 @@ public class GetContentResponse
 public class AddMessageRequest
 { 
     public string Header { get; set; } = null!;
-    public JsonDocument Preview { get; set; } = null!;
-    public JsonDocument Content { get; set; } = null!;
+    public JsonDocument Preview { get; set; } = JsonDocument.Parse("{}");
+    public JsonDocument Content { get; set; } = JsonDocument.Parse("{}");
 }
 
 public class EmptyResponse

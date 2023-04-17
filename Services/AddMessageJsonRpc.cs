@@ -1,4 +1,5 @@
 using Journal.Models;
+using MongoDB.Bson;
 
 namespace Journal.Services;
 
@@ -14,14 +15,14 @@ public class AddMessageJsonRpc : IJsonRpcHandler<AddMessageRequest, EmptyRespons
     public async Task<EmptyResponse> Execute(ulong userId, AddMessageRequest request)
     {
         MessageId messageId = await _journalService.GetNewMessageId(userId);
-
+        
         var message = new Message
         {
             Id = messageId, 
             Date = DateTime.Now, 
             Header = request.Header, 
-            Preview = request.Preview,
-            Content = request.Content, 
+            Preview = BsonDocument.Parse(request.Preview.RootElement.GetRawText()),
+            Content = BsonDocument.Parse(request.Content.RootElement.GetRawText()), 
             State = MessageState.Unseen
         };
 
