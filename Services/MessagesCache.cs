@@ -3,52 +3,57 @@ using Journal.Models;
 
 namespace Journal.Services;
 
-public class PreviewsCache
+public class CacheByUser
 {
     private readonly TimeSpan _cacheDuration;
-    private readonly MemoryCache _previewsCache;
+    private readonly MemoryCache _messagesCache;
 
-    public PreviewsCache(int sizeLimit, TimeSpan cacheDuration)
+    public CacheByUser(int sizeLimit, TimeSpan cacheDuration)
     {
-        _previewsCache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit });
+        _messagesCache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit });
         _cacheDuration = cacheDuration;
     }
 
-    public void AddOrUpdate(MessageId messageId, MessagePreview preview)
+    public void AddOrUpdate(MessageId messageId, Message message)
     {
-        var userMessages = _previewsCache.Get<Dictionary<MessageId, MessagePreview>>(messageId.UserId)
-                           ?? new Dictionary<MessageId, MessagePreview>();
-        userMessages[messageId] = preview;
-        _previewsCache.Set(messageId.UserId, userMessages, DateTimeOffset.UtcNow.Add(_cacheDuration));
+        var userMessages = _messagesCache.Get<Dictionary<MessageId, Message>>(messageId.UserId)
+                           ?? new Dictionary<MessageId, Message>();
+        userMessages[messageId] = message;
+        var entryOptions = new MemoryCacheEntryOptions
+            { SlidingExpiration = _cacheDuration, Size = userMessages.Count };
+        _messagesCache.Set(messageId.UserId, userMessages, entryOptions);
     }
 
-    public void AddOrUpdateMultiple(ulong userId, List<MessagePreview> previews)
+    public void AddOrUpdateMultiple(ulong userId, List<Message> messages)
     {
-        var userMessages = _previewsCache.Get<Dictionary<MessageId, MessagePreview>>(userId)
-                           ?? new Dictionary<MessageId, MessagePreview>();
-        foreach (var preview in previews)
+        var userMessages = _messagesCache.Get<Dictionary<MessageId, Message>>(userId)
+                           ?? new Dictionary<MessageId, Message>();
+        foreach (var message in messages)
         {
-            userMessages[preview.Id] = preview;
+            userMessages[message.Id] = message;
         }
-        _previewsCache.Set(userId, userMessages, DateTimeOffset.UtcNow.Add(_cacheDuration));
+
+        var entryOptions = new MemoryCacheEntryOptions
+            { SlidingExpiration = _cacheDuration, Size = userMessages.Count };
+        _messagesCache.Set(userId, userMessages, entryOptions);
     }
 
-    public List<MessagePreview>? Get(MessageId fromId, int count)
+    public List<Message>? GetList(MessageId fromId, int count)
     {
-        var previews = _previewsCache.Get<Dictionary<MessageId, MessagePreview>>(fromId.UserId);
-        if (previews == null || !previews.ContainsKey(fromId))
+        var messages = _messagesCache.Get<Dictionary<MessageId, Message>>(fromId.UserId);
+        if (messages == null)
         {
             return null;
         }
 
-        var result = new List<MessagePreview>();
+        var result = new List<Message>();
         int lastIndex = 0;
 
-        foreach (var preview in previews)
+        foreach (var message in messages)
         {
-            if (preview.Key.CompareTo(fromId) > 0)
+            if (message.Key.CompareTo(fromId) > 0)
             {
-                result.Add(preview.Value);
+                result.Add(message.Value);
                 lastIndex++;
                 if (lastIndex == count)
                 {
@@ -65,25 +70,9 @@ public class PreviewsCache
         return result;
     }
 
-    public MessagePreview? GetOne(MessageId messageId)
-    {
-        var previews = _previewsCache.Get<Dictionary<MessageId, MessagePreview>>(messageId.UserId);
-        if (previews == null)
-        {
-            return null;
-        }
-        
-        if (previews.TryGetValue(messageId, out var preview))
-        {
-            return preview;
-        }
-
-        return null;
-    }
-
     public void Delete(MessageId messageId)
     {
-        var userMessages = _previewsCache.Get<Dictionary<MessageId, MessagePreview>>(messageId.UserId);
+        var userMessages = _messagesCache.Get<Dictionary<MessageId, Message>>(messageId.UserId);
         if (userMessages == null)
         {
             return;
@@ -92,34 +81,35 @@ public class PreviewsCache
         userMessages.Remove(messageId);
         if (!userMessages.Any())
         {
-            _previewsCache.Remove(messageId.UserId);
+            _messagesCache.Remove(messageId.UserId);
         }
     }
 }
 
-public class ContentsCache
+public class CacheByMessage
 {
     private readonly TimeSpan _cacheDuration;
-    private readonly MemoryCache _contentsCache;
+    private readonly MemoryCache _messagesCache;
 
-    public ContentsCache(int sizeLimit, TimeSpan cacheDuration)
+    public CacheByMessage(int sizeLimit, TimeSpan cacheDuration)
     {
-        _contentsCache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit });
+        _messagesCache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit });
         _cacheDuration = cacheDuration;
     }
 
-    public void AddOrUpdate(MessageId messageId, MessageContent content)
+    public void AddOrUpdate(MessageId messageId, Message message)
     {
-        _contentsCache.Set(messageId, content, DateTimeOffset.UtcNow.Add(_cacheDuration));
+        var entryOptions = new MemoryCacheEntryOptions { SlidingExpiration = _cacheDuration, Size = 1 };
+        _messagesCache.Set(messageId, message, entryOptions);
     }
 
-    public MessageContent? Get(MessageId messageId)
+    public Message? Get(MessageId messageId)
     {
-        return _contentsCache.Get<MessageContent>(messageId);
+        return _messagesCache.Get<Message>(messageId);
     }
 
     public void Delete(MessageId messageId)
     {
-        _contentsCache.Remove(messageId);
+        _messagesCache.Remove(messageId);
     }
 }

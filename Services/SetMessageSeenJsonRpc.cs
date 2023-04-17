@@ -11,8 +11,13 @@ public class SetMessageSeenJsonRpc : IJsonRpcHandler<SetMessageSeenRequest, Empt
         _journalService = journalService;
     }
 
-    public async Task<EmptyResponse> Execute(SetMessageSeenRequest request)
+    public async Task<EmptyResponse> Execute(ulong userId, SetMessageSeenRequest request)
     {
+        if (request.Id.UserId != userId)
+        {
+            throw new Exception(
+                $"You cannot modify other user's messages. UserId {userId}, MessageId.UserId {request.Id.UserId}");
+        }
         await _journalService.SetMessageSeen(request.Id);
         return new EmptyResponse();
     }

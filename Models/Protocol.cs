@@ -24,8 +24,7 @@ public class GetContentResponse
 }
 
 public class AddMessageRequest
-{
-    public ulong UserId { get; set; }
+{ 
     public string Header { get; set; } = null!;
     public JsonDocument Preview { get; set; } = null!;
     public JsonDocument Content { get; set; } = null!;

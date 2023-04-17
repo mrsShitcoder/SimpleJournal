@@ -1,21 +1,13 @@
+using MongoDB.Bson.Serialization.Attributes;
+
 namespace Journal.Models;
 
 public class MessageId : IComparable<MessageId>
 {
+    [BsonId]
     public ulong UserId { get; set; }
     public ulong Sequence { get; set; }
-
-    public MessageId(ulong userId, ulong sequence)
-    {
-        UserId = userId;
-        Sequence = sequence;
-    }
-
-    public MessageId(UserSequence sequence)
-    {
-        UserId = sequence.UserId;
-        Sequence = sequence.MaxSequence;
-    }
+    
     public int CompareTo(MessageId? other)
     {
         if (other == null)

@@ -3,92 +3,81 @@ namespace Journal.Services;
 
 public class JournalService
 {
-    private readonly PreviewsCache _previewsCache;
-    private readonly ContentsCache _contentsCache;
+    private readonly CacheByUser _usersCache;
+    private readonly CacheByMessage _messagesCache;
     private readonly JournalDatabaseService _databaseService;
 
-    public JournalService(JournalDatabaseService databaseService, PreviewsCache previewsCache,
-        ContentsCache contentsCache)
+    public JournalService(JournalDatabaseService databaseService, CacheByUser usersCache,
+        CacheByMessage messagesCache)
     {
         _databaseService = databaseService;
-        _previewsCache = previewsCache;
-        _contentsCache = contentsCache;
+        _usersCache = usersCache;
+        _messagesCache = messagesCache;
     }
 
-    public async Task<List<MessagePreview>> GetPreviews(MessageId fromId, int count)
+    public async Task<List<Message>> GetMessagesList(MessageId fromId, int count)
     {
-        var cachedData = _previewsCache.Get(fromId, count);
+        var cachedData = _usersCache.GetList(fromId, count);
         if (cachedData != null)
         {
             return cachedData;
         }
 
-        List<MessagePreview> previews = await _databaseService.GetMessagePreviewsAsync(fromId, count);
-        if (previews.Any())
+        List<Message> messages = await _databaseService.GetMessageList(fromId, count);
+        if (messages.Any())
         {
-            _previewsCache.AddOrUpdateMultiple(fromId.UserId, previews);
+            _usersCache.AddOrUpdateMultiple(fromId.UserId, messages);
         }
         
-        return previews;
+        return messages;
     }
 
-    public async Task<MessageContent> GetContent(MessageId messageId)
+    public async Task<Message> GetOneMessage(MessageId messageId)
     {
-        var cachedContent = _contentsCache.Get(messageId);
-        if (cachedContent != null)
+        var cachedData = _messagesCache.Get(messageId);
+        if (cachedData != null)
         {
-            return cachedContent;
+            return cachedData;
         }
 
-        var fetchedData = await _databaseService.GetMessageContentAsync(messageId);
+        var fetchedData = await _databaseService.GetMessage(messageId);
 
         if (fetchedData != null)
         {
-            _contentsCache.AddOrUpdate(messageId, fetchedData);
+            _messagesCache.AddOrUpdate(messageId, fetchedData);
             return fetchedData;
         }
 
         throw new KeyNotFoundException($"Not found messageId: {messageId} neither in cache nor in DB");
     }
 
-    public async Task AddMessage(MessageId messageId, MessagePreview preview, MessageContent content)
+    public async Task AddMessage(MessageId messageId, Message message)
     {
-        await _databaseService.CreateMessage(preview, content);
-        _previewsCache.AddOrUpdate(messageId, preview);
-        _contentsCache.AddOrUpdate(messageId, content);
+        await _databaseService.CreateMessage(message);
+        _usersCache.AddOrUpdate(messageId, message);
+        _messagesCache.AddOrUpdate(messageId, message);
     }
 
     public async Task DeleteMessage(MessageId messageId)
     {
         await _databaseService.DeleteMessage(messageId);
-        _previewsCache.Delete(messageId);
-        _contentsCache.Delete(messageId);
+        _usersCache.Delete(messageId);
+        _messagesCache.Delete(messageId);
     }
 
     public async Task SetMessageSeen(MessageId messageId)
     {
-        var preview = _previewsCache.GetOne(messageId) ?? await _databaseService.GetMessagePreviewAsync(messageId);
-        if (preview == null)
-        {
-            throw new KeyNotFoundException($"Not found messageId: {messageId} neither in cache nor in DB");
-        }
+        await _databaseService.UpdateMessageState(messageId, MessageState.Seen);
 
-        if (preview.State == MessageState.Seen)
+        var message = _messagesCache.Get(messageId) ?? await _databaseService.GetMessage(messageId);
+        if (message != null)
         {
-            return;
+            _messagesCache.AddOrUpdate(messageId, message);
         }
-        
-        preview.State = MessageState.Seen;
-        await _databaseService.UpdatePreview(preview);
-        _previewsCache.AddOrUpdate(messageId, preview);
     }
 
-    public async Task<UserSequence> GetNewUserSequence(ulong userId)
+    public async Task<MessageId> GetNewMessageId(ulong userId)
     {
-        var lastSeq = await _databaseService.GetUserSequenceAsync(userId) ?? new UserSequence();
-        lastSeq.UserId = userId;
-        lastSeq.MaxSequence++;
-        await _databaseService.AddUserSequenceAsync(lastSeq);
-        return lastSeq;
+        return await _databaseService.CreateNewMessageId(userId);
     }
 }

@@ -10,10 +10,16 @@ public class GetContentJsonRpc  : IJsonRpcHandler<GetContentRequest, GetContentR
         _journalService = journalService;
     }
 
-    public async Task<GetContentResponse> Execute(GetContentRequest request)
+    public async Task<GetContentResponse> Execute(ulong userId, GetContentRequest request)
     {
+        if (request.Id.UserId != userId)
+        {
+            throw new Exception(
+                $"You cannot see other user's messages. UserId {userId}, MessageId.UserId {request.Id.UserId}");
+        }
         var response = new GetContentResponse();
-        response.Content = await _journalService.GetContent(request.Id);
+        Message message = await _journalService.GetOneMessage(request.Id);
+        response.Content = new MessageContent(message);
         return response;
     }
 

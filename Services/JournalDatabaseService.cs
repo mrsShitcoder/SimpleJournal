@@ -7,11 +7,10 @@ using MongoDB.Driver;
 
 public class JournalDatabaseService
 {
-    private readonly IMongoCollection<MessageContent> _messageContents;
 
-    private readonly IMongoCollection<MessagePreview> _messagePreviews;
+    private readonly IMongoCollection<Message> _messages;
 
-    private readonly IMongoCollection<UserSequence> _userSequence;
+    private readonly IMongoCollection<MessageId> _messageIds;
 
     private readonly MongoClient _mongoClient;
 
@@ -19,87 +18,59 @@ public class JournalDatabaseService
     {
         _mongoClient = new MongoClient(dbSettings.Value.Connection);
         var database = _mongoClient.GetDatabase(dbSettings.Value.DatabaseName);
-        _messagePreviews = database.GetCollection<MessagePreview>(dbSettings.Value.MessagePreviewsCollection);
-        _messageContents = database.GetCollection<MessageContent>(dbSettings.Value.MessageContentsCollection);
-        _userSequence = database.GetCollection<UserSequence>(dbSettings.Value.UserSequenceCollection);
+        _messages = database.GetCollection<Message>(dbSettings.Value.MessagesCollection);
+        _messageIds = database.GetCollection<MessageId>(dbSettings.Value.CurrentMessageIdCollection);
     }
 
-    public async Task<List<MessagePreview>> GetMessagePreviewsAsync(MessageId messageId, int count)
+    public async Task<List<Message>> GetMessageList(MessageId messageId, int count)
     {
-        IAsyncCursor<MessagePreview> cursor =  await _messagePreviews.FindAsync(
-            preview => (preview.Id.UserId == messageId.UserId) && (preview.Id.Sequence > messageId.Sequence),
-            new FindOptions<MessagePreview> { Limit = count });
+        IAsyncCursor<Message> cursor =  await _messages.FindAsync(
+            message => (message.Id.UserId == messageId.UserId) && (message.Id.Sequence > messageId.Sequence),
+            new FindOptions<Message> { Limit = count });
 
         return await cursor.ToListAsync();
     }
 
-    public async Task<MessagePreview?> GetMessagePreviewAsync(MessageId messageId)
+    public async Task<Message?> GetMessage(MessageId messageId)
     {
-        return await _messagePreviews.Find(preview => preview.Id == messageId).FirstOrDefaultAsync();
+        return await _messages.Find(message => message.Id == messageId).FirstOrDefaultAsync();
     }
 
-    public async Task<UserSequence?> GetUserSequenceAsync(ulong userId)
+    public async Task<MessageId> CreateNewMessageId(ulong userId)
     {
-        return await _userSequence.Find(sequence => sequence.UserId == userId).FirstOrDefaultAsync();
-    }
-
-    public async Task AddUserSequenceAsync(UserSequence newSeq)
-    {
-        await _userSequence.ReplaceOneAsync(sequence => sequence.UserId == newSeq.UserId, newSeq);
-    }
-
-    public async Task<MessageContent?> GetMessageContentAsync(MessageId messageId)
-        => await _messageContents.Find(message => message.Id == messageId).FirstOrDefaultAsync();
-
-    public async Task CreateMessage(MessagePreview messagePreview, MessageContent messageContent)
-    {
-        using (var clientSession = _mongoClient.StartSession())
+        MessageId currentId =
+            await _messageIds.Find(sequence => sequence.UserId == userId).FirstOrDefaultAsync();
+        
+        if (currentId == null)
         {
-            try
-            {
-                clientSession.StartTransaction();
-                await _messagePreviews.InsertOneAsync(clientSession, messagePreview);
-                await _messageContents.InsertOneAsync(clientSession, messageContent);
-                await clientSession.CommitTransactionAsync();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Transaction aborted. Error {e}");
-                await clientSession.AbortTransactionAsync();
-                throw;
-            }
-            
+            currentId = new MessageId();
+            currentId.UserId = userId;
+            await _messageIds.InsertOneAsync(currentId);
         }
+        else
+        {
+            currentId.Sequence++;
+            var updateId = Builders<MessageId>.Update.Set(messageId => messageId.Sequence, currentId.Sequence);
+            await _messageIds.UpdateOneAsync(messageId => messageId.UserId == userId, updateId);
+        }
+
+        return currentId;
+    }
+
+    public async Task CreateMessage(Message message)
+    {
+        await _messages.InsertOneAsync(message);
     }
 
     public async Task DeleteMessage(MessageId messageId)
     {
-        using (var clientSession = _mongoClient.StartSession())
-        {
-            try
-            {
-                clientSession.StartTransaction();
-                await _messagePreviews.DeleteOneAsync(clientSession, message => message.Id == messageId);
-                await _messageContents.DeleteOneAsync(clientSession, message => message.Id == messageId);
-                await clientSession.CommitTransactionAsync();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Transaction aborted. Error {e}");
-                await clientSession.AbortTransactionAsync();
-                throw;
-            }
-            
-        }
+        await _messages.DeleteOneAsync(message => message.Id == messageId);
     }
 
-    public async Task UpdatePreview(MessagePreview updatedPreview)
+    public async Task UpdateMessageState(MessageId messageId, MessageState state)
     {
-        var updateState = Builders<MessagePreview>.Update.Set(preview => preview.State, updatedPreview.State);
-        var updateHeader = Builders<MessagePreview>.Update.Set(preview => preview.Header, updatedPreview.Header);
-        var updateBody = Builders<MessagePreview>.Update.Set(preview => preview.Preview, updatedPreview.Preview);
-        var update = Builders<MessagePreview>.Update.Combine(updateState, updateBody, updateHeader);
-        await _messagePreviews.UpdateOneAsync<MessagePreview>(preview => preview.Id == updatedPreview.Id,
-            update);
+        var updateState = Builders<Message>.Update.Set(preview => preview.State, state);
+        await _messages.UpdateOneAsync<Message>(preview => preview.Id == messageId,
+            updateState);
     }
 }

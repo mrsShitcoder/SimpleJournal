@@ -11,23 +11,21 @@ public class AddMessageJsonRpc : IJsonRpcHandler<AddMessageRequest, EmptyRespons
         _journalService = journalService;
     }
 
-    public async Task<EmptyResponse> Execute(AddMessageRequest request)
+    public async Task<EmptyResponse> Execute(ulong userId, AddMessageRequest request)
     {
-        UserSequence seq = await _journalService.GetNewUserSequence(request.UserId);
-        var messageId = new MessageId(seq);
+        MessageId messageId = await _journalService.GetNewMessageId(userId);
 
-        var preview = new MessagePreview
+        var message = new Message
         {
-            Id = messageId,
-            Date = DateTime.Now,
-            Header = request.Header,
+            Id = messageId, 
+            Date = DateTime.Now, 
+            Header = request.Header, 
             Preview = request.Preview,
+            Content = request.Content, 
             State = MessageState.Unseen
         };
 
-
-        var content = new MessageContent { Id = messageId, Content = request.Content };
-        await _journalService.AddMessage(messageId, preview, content);
+        await _journalService.AddMessage(messageId, message);
         return new EmptyResponse();
     }
 
