@@ -1,4 +1,5 @@
 using Journal.Models;
+using Journal.Services.JsonRpc;
 
 namespace Journal.Services;
 
@@ -15,7 +16,7 @@ public class SetMessageSeenJsonRpc : IJsonRpcHandler<SetMessageSeenRequest, Empt
     {
         if (request.Id.UserId != userId)
         {
-            throw new Exception(
+            throw new BadRequestException(
                 $"You cannot modify other user's messages. UserId {userId}, MessageId.UserId {request.Id.UserId}");
         }
         await _journalService.SetMessageSeen(request.Id);

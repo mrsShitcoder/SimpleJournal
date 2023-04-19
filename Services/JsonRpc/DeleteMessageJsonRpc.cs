@@ -1,6 +1,6 @@
 using Journal.Models;
 
-namespace Journal.Services;
+namespace Journal.Services.JsonRpc;
 
 public class DeleteMessageJsonRpc : IJsonRpcHandler<DeleteMessageRequest, EmptyResponse>
 {
@@ -15,10 +15,10 @@ public class DeleteMessageJsonRpc : IJsonRpcHandler<DeleteMessageRequest, EmptyR
     {
         if (request.Id.UserId != userId)
         {
-            throw new Exception(
+            throw new BadRequestException(
                 $"You cannot delete something that is not yours. UserId {userId}, MessageId.UserId {request.Id.UserId}");
         }
-        
+
         await _journalService.DeleteMessage(request.Id);
         return new EmptyResponse();
     }

@@ -1,6 +1,6 @@
 using Journal.Models;
 
-namespace Journal.Services;
+namespace Journal.Services.JsonRpc;
 
 public class GetPreviewsJsonRpc : IJsonRpcHandler<GetPreviewsRequest, GetPreviewsResponse>
 {
@@ -14,7 +14,7 @@ public class GetPreviewsJsonRpc : IJsonRpcHandler<GetPreviewsRequest, GetPreview
     {
         if (request.FromId.UserId != userId)
         {
-            throw new Exception(
+            throw new BadRequestException(
                 $"You cannot see other user's messages. UserId {userId}, MessageId.UserId {request.FromId.UserId}");
         }
         List<Message> messages = await _journalService.GetMessagesList(request.FromId, request.Count);

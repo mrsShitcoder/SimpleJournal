@@ -1,7 +1,7 @@
 using Journal.Models;
 using MongoDB.Bson;
 
-namespace Journal.Services;
+namespace Journal.Services.JsonRpc;
 
 public class AddMessageJsonRpc : IJsonRpcHandler<AddMessageRequest, EmptyResponse>
 {

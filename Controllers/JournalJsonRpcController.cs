@@ -1,5 +1,6 @@
 using Journal.Models;
 using Journal.Services;
+using Journal.Services.JsonRpc;
 
 namespace Journal.Controllers;
 using Microsoft.AspNetCore.Mvc;

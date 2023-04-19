@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Journal.Models;
+using Journal.Services.JsonRpc;
 
 namespace Journal.Services;
 
@@ -25,7 +26,7 @@ public interface IJsonRpcHandler<TRequest, TResponse> : IJsonRpcHandlerBase
         var request = JsonSerializer.Deserialize<TRequest>(concreteRequest.GetProperty("request").GetRawText());
         if (request == null)
         {
-            throw new ArgumentException($"Request {concreteRequest} is not parseable");
+            throw new BadRequestException($"Request {concreteRequest} is not parseable");
         }
 
         return request;
@@ -44,7 +45,7 @@ public interface IJsonRpcHandler<TRequest, TResponse> : IJsonRpcHandlerBase
         ulong userId = GetUserId(request);
         if (userId == 0)
         {
-            throw new Exception("Got zero userId");
+            throw new BadRequestException("Got zero userId");
         }
         TRequest req = PrepareRequest(request);
         Console.WriteLine($"Got request: {JsonSerializer.Serialize(req)}");

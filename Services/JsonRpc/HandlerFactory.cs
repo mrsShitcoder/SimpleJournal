@@ -1,4 +1,4 @@
-namespace Journal.Services;
+namespace Journal.Services.JsonRpc;
 
 public class JsonRpcHandlerFactory
 {
